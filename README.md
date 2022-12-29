@@ -31,8 +31,17 @@ Add your Strapi content-types into a Meilisearch instance. The plugin listens to
 
 - [📖 Documentation](#-documentation)
 - [🔧 Installation](#-installation)
+  - [Run Both with Docker](#run-both-with-docker)
 - [🎬 Getting Started](#-getting-started)
+    - [Using the plugin page](#using-the-plugin-page)
+    - [Using a config file](#using-a-config-file)
 - [💅 Customization](#-customization)
+  - [🏷 Custom index name](#-custom-index-name)
+  - [🪄 Transform entries](#-transform-entries)
+  - [Using custom ID](#using-custom-id)
+  - [🤚 Filter entries](#-filter-entries)
+  - [🏗 Add Meilisearch settings](#-add-meilisearch-settings)
+  - [🔎 Entries query](#-entries-query)
 - [💡 Run the Playground](#-run-the-playground)
 - [🤖 Compatibility with Meilisearch and Strapi](#-compatibility-with-meilisearch-and-strapi)
 - [⚙️ Development Workflow and Contributing](#️-development-workflow-and-contributing)
@@ -321,7 +330,29 @@ Result:
 
 By transforming the `categories` into an array of names, it is now compatible with the [`filtering` feature](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html#configuring-filters) in Meilisearch.
 
-**Important**: You should always return the id of the entry without any transformation to [allow sync](https://github.com/meilisearch/strapi-plugin-meilisearch/issues/487) when unpublished or deleting some entries in Strapi.
+**Important**: You should not transform the id of the entry to [allow sync](https://github.com/meilisearch/strapi-plugin-meilisearch/issues/487) when unpublished or deleting some entries in Strapi. Instead check [using custom ID](#using-custom-id).
+
+### Using custom ID
+
+By default, the plugin uses the `id` field of the entry to build the `_meilisearch_id` of the entry in Meilisearch. It is possible to define which field will be used to build the value instead of the default `id`.
+
+**Example**
+```js
+// config/plugins.js
+
+module.exports = () => {
+  return {
+    meilisearch: {
+      config: {
+        restaurant: {
+          customId: 'slug',
+        }
+      }
+    }
+  }
+```
+
+This will produce the following `_meilisearch_id` in Meilisearch: `restaurant-{entry.slug}`.
 
 ### 🤚 Filter entries
 

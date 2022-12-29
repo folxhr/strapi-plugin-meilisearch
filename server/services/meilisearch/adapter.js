@@ -29,16 +29,17 @@ module.exports = ({ strapi }) => {
      * The ids are transformed in the following format: `[collectionName]-[id]`
      *
      * @param  {object} options
+     * @param  {object} options.config - Configuration utililites.
      * @param  {string} options.contentType - ContentType name.
      * @param  {object[]} options.entries - entries.
      *
      * @returns {object[]} - Formatted entries.
      */
-    addCollectionNamePrefix: function ({ contentType, entries }) {
+    addCollectionNamePrefix: function ({ config, contentType, entries }) {
       return entries.map(entry => ({
         ...entry,
         _meilisearch_id: this.addCollectionNamePrefixToId({
-          entryId: entry.id,
+          entryId: config.getCustomId({entry, contentType}),
           contentType,
         }),
       }))

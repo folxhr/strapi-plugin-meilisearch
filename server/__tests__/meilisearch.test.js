@@ -44,12 +44,46 @@ describe('Tests content types', () => {
 
     const tasks = await meilisearchService.deleteEntriesFromMeiliSearch({
       contentType: 'restaurant',
-      entriesId: [1, 2],
+      entries: [
+        {id: 1, name: 'one'},
+        {id: 2, name: 'two'}
+      ],
     })
     expect(client.index('').deleteDocuments).toHaveBeenCalledTimes(1)
     expect(client.index('').deleteDocuments).toHaveBeenCalledWith([
       'restaurant-1',
       'restaurant-2',
+    ])
+    expect(client.index).toHaveBeenCalledWith('customIndex')
+    expect(tasks).toEqual([{ taskUid: 1 }, { taskUid: 2 }])
+  })
+
+  test('Test to delete entries with custom id from Meilisearch', async () => {
+    const customStrapi = createStrapiMock({
+      restaurantConfig: {
+        indexName: 'customIndex',
+        customId: 'name'
+      },
+    })
+
+    // Spy
+    const client = new Meilisearch({ host: 'abc' })
+
+    const meilisearchService = createMeilisearchService({
+      strapi: customStrapi,
+    })
+
+    const tasks = await meilisearchService.deleteEntriesFromMeiliSearch({
+      contentType: 'restaurant',
+      entries: [
+        {id: 1, name: 'one'},
+        {id: 2, name: 'two'}
+      ],
+    })
+    expect(client.index('').deleteDocuments).toHaveBeenCalledTimes(1)
+    expect(client.index('').deleteDocuments).toHaveBeenCalledWith([
+      'restaurant-one',
+      'restaurant-two',
     ])
     expect(client.index).toHaveBeenCalledWith('customIndex')
     expect(tasks).toEqual([{ taskUid: 1 }, { taskUid: 2 }])

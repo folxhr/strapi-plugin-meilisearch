@@ -48,6 +48,7 @@ const sanitizeEntries = async function ({
 
   // Add content-type prefix to id
   entries = await adapter.addCollectionNamePrefix({
+    config,
     contentType,
     entries,
   })
@@ -87,13 +88,15 @@ module.exports = ({ strapi, adapter, config }) => {
      *
      * @returns  { Promise<import("meilisearch").Task>} p - Task body returned by Meilisearch API.
      */
-    deleteEntriesFromMeiliSearch: async function ({ contentType, entriesId }) {
+    deleteEntriesFromMeiliSearch: async function ({ contentType, entries }) {
       const { apiKey, host } = await store.getCredentials()
       const client = Meilisearch({ apiKey, host })
-
+      
       const indexUid = config.getIndexNameOfContentType({ contentType })
-      const documentsIds = entriesId.map(entryId =>
-        adapter.addCollectionNamePrefixToId({ entryId, contentType })
+      if (!Array.isArray(entries)) entries = [entries];
+
+      const documentsIds = entries.map(entry =>
+        adapter.addCollectionNamePrefixToId({ entryId: config.getCustomId({entry, contentType}), contentType })
       )
 
       return await client.index(indexUid).deleteDocuments(documentsIds)
@@ -126,7 +129,7 @@ module.exports = ({ strapi, adapter, config }) => {
           return client.index(indexUid).deleteDocument(
             adapter.addCollectionNamePrefixToId({
               contentType,
-              entryId: entry.id,
+              entryId: config.getCustomId({entry, contentType}),
             })
           )
         } else {
@@ -352,7 +355,7 @@ module.exports = ({ strapi, adapter, config }) => {
         const deleteEntries = async (entries, contentType) => {
           await this.deleteEntriesFromMeiliSearch({
             contentType,
-            entriesId: entries.map(entry => entry.id),
+            entries,
           })
         }
         await contentTypeService.actionInBatches({

@@ -257,6 +257,39 @@ describe('Test plugin configuration', () => {
       'The "random" option of "restaurant" is not a known option'
     )
   })
+
+  test('Test customId with wrong type', async () => {
+    validatePluginConfig({
+      restaurant: {
+        customId: 0,
+      },
+    })
+    expect(strapiMock.log.warn).toHaveBeenCalledTimes(0)
+    expect(strapiMock.log.error).toHaveBeenCalledTimes(1)
+    expect(strapiMock.log.error).toHaveBeenCalledWith(
+      'The "customId" option of "restaurant" should be a string'
+    )
+  })
+
+  test('Test customId with string', async () => {
+    validatePluginConfig({
+      restaurant: {
+        customId: 'customId',
+      },
+    })
+    expect(strapiMock.log.warn).toHaveBeenCalledTimes(0)
+    expect(strapiMock.log.error).toHaveBeenCalledTimes(0)
+  })
+
+  test('Test customId with undefined', async () => {
+    validatePluginConfig({
+      restaurant: {
+        customId: undefined,
+      },
+    })
+    expect(strapiMock.log.warn).toHaveBeenCalledTimes(0)
+    expect(strapiMock.log.error).toHaveBeenCalledTimes(0)
+  })
 })
 
 describe('Test entriesQuery configuration', () => {

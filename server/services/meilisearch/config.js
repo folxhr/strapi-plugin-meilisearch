@@ -211,6 +211,36 @@ module.exports = ({ strapi }) => {
       const contentTypeConfig = meilisearchConfig[collection] || {}
 
       const entriesQuery = contentTypeConfig.entriesQuery || {}
+      try {
+        if (
+          Array.isArray(entries) &&
+          typeof contentTypeConfig?.transformUnpublishedEntry === 'function'
+        ) {
+          strapi.log.info("TRANSFORMING UNPUB");
+          // for(var i = 0; i < entries.length; i++) {
+          //   strapi.log.info(JSON.stringify(entries[i], null, 4))
+          // }
+          const transformed =
+            entries.map(
+              async entry =>
+                contentTypeConfig.transformUnpublishedEntry({
+                  entry,
+                  contentType,
+                })
+            )
+          if (transformed.length > 0 && !isObject(transformed[0])) {
+            return aborted({ contentType, action: 'transformed' })
+          }
+          if (entriesQuery.publicationState === 'preview') {
+            return transformed
+          } else {
+            return transformed.filter(entry => !(entry?.publishedAt === null))
+          }
+        }
+      } catch (e) {
+        strapi.log.error(e)
+        return aborted({ contentType, action: 'transformed' })
+      }
 
       if (entriesQuery.publicationState === 'preview') {
         return entries
@@ -240,6 +270,32 @@ module.exports = ({ strapi }) => {
         return entries
       } else {
         return entries.filter(entry => entry.locale === entriesQuery.locale)
+      }
+    },
+    /**
+     * Set custom meilisearch id.
+     * In the plugin entriesQuery, if `customId` is set and not equal to `false`
+     * all entries will have a custom id set that will be used for indexing.
+     *
+     * @param {object} options
+     * @param {Array<Object>} options.entries - The entries to filter.
+     * @param {string} options.contentType - ContentType name.
+     *
+     * @return {Array<Object>} - Published entries.
+     */
+     getCustomId: function ({ entry, contentType }) {
+      const collection = contentTypeService.getCollectionName({ contentType })
+      const contentTypeConfig = meilisearchConfig[collection] || {}
+
+      if (!contentTypeConfig?.customId || typeof contentTypeConfig?.customId !== 'string') {
+        return entry.id;
+      } else {
+        try {
+          return entry[contentTypeConfig.customId]
+        } catch (e) {
+          strapi.log.error(e)
+          return aborted({ contentType, action: 'mapped' })
+        }
       }
     },
   }

@@ -172,6 +172,7 @@ function CollectionConfig({ collectionName, configuration }) {
   const {
     indexName,
     transformEntry,
+    customId,
     filterEntry,
     settings,
     entriesQuery,
@@ -225,6 +226,17 @@ function CollectionConfig({ collectionName, configuration }) {
       return this
     },
 
+    validateCustomId() {
+      // filterEntry is either undefined or a function
+      if (customId !== undefined && typeof customId !== 'string') {
+        log.error(
+          `The "customId" option of "${collectionName}" should be a string`
+        )
+      } else if (customId !== undefined) {
+        options.customId = customId
+      }
+      return this
+    },
     validateMeilisearchSettings() {
       // Settings is either undefined or an object
       if (settings !== undefined && !isObject(settings)) {
@@ -321,6 +333,7 @@ function PluginConfig({ configuration }) {
           })
             .validateIndexName()
             .validateFilterEntry()
+            .validateCustomId()
             .validateTransformEntry()
             .validateMeilisearchSettings()
             .validateNoInvalidKeys()

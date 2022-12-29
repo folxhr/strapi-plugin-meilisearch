@@ -106,37 +106,81 @@ module.exports = ({ strapi }) => {
               )
             })
         },
-        async afterDelete(event) {
-          const { result, params } = event
+        async beforeDelete(event) {
+          const { result, params } = event;
+
           const meilisearch = strapi
             .plugin('meilisearch')
             .service('meilisearch')
 
-          let entriesId = []
-          // Different ways of accessing the id's depending on the number of entries being deleted
-          // In case of multiple deletes:
-          if (
-            params?.where?.$and &&
-            params?.where?.$and[0] &&
-            params?.where?.$and[0].id?.$in
-          )
-            entriesId = params?.where?.$and[0].id.$in
-          // In case there is only one entry being deleted
-          else entriesId = [result.id]
+          // Fetch complete entry instead of using result that is possibly
+          // partial.
+          const entry = await contentTypeService.getEntry({
+            contentType: contentTypeUid,
+            id: result.id,
+            entriesQuery: meilisearch.entriesQuery({ contentType }),
+          })
+          
+          event.state = { entry };
+        },
+        async beforeDeleteMany(event) {
+          strapi.log.info("beforeDeleteMany");
+          const nbrEntries = await contentTypeService.numberOfEntries({
+            contentType: contentTypeUid,
+            where: event.params.where,
+          })
+
+          const entries = []
+          const BATCH_SIZE = 500
+
+          for (let pos = 0; pos < nbrEntries; pos += BATCH_SIZE) {
+            const batch = await contentTypeService.getEntries({
+              contentType: contentTypeUid,
+              filters: event.params.where,
+              start: pos,
+              limit: BATCH_SIZE,
+            })
+            entries.push(...batch)
+          }
+          event.state = { entries };
+        },
+        async afterDelete(event) {
+          const { state } = event
+          const { entry } = state
+          
+          const meilisearch = strapi
+            .plugin('meilisearch')
+            .service('meilisearch')
 
           meilisearch
             .deleteEntriesFromMeiliSearch({
               contentType: contentTypeUid,
-              entriesId: entriesId,
+              entries: [entry],
             })
             .catch(e => {
               strapi.log.error(
-                `Meilisearch could not delete entry with id: ${result.id}: ${e.message}`
+                `Meilisearch could not delete entry with id: ${entry.id}: ${e.message}`
               )
             })
         },
         async afterDeleteMany(event) {
-          this.afterDelete(event)
+          const { state } = event
+          const { entries } = state
+
+          const meilisearch = strapi
+            .plugin('meilisearch')
+            .service('meilisearch')
+
+          meilisearch
+            .deleteEntriesFromMeiliSearch({
+              contentType: contentTypeUid,
+              entries: entries,
+            })
+            .catch(e => {
+              strapi.log.error(
+                `Meilisearch could not delete the entries: ${e.message}`
+              )
+            })
         },
       })
 
